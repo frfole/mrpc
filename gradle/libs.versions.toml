@@ -1,0 +1,20 @@
+[versions]
+imgui = "1.86.11"
+gson = "2.10.1"
+jbannotations = "24.1.0"
+adventure = "4.16.0"
+lwjgl = "3.3.3"
+shadow = "8.1.1"
+
+[libraries]
+imgui = { group = "io.github.spair", name = "imgui-java-app", version.ref = "imgui" }
+gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson"}
+jbannotations = { group = "org.jetbrains", name = "annotations", version.ref = "jbannotations"}
+adventureKey = { group = "net.kyori", name = "adventure-key", version.ref = "adventure"}
+adventureApi = { group = "net.kyori", name = "adventure-api", version.ref = "adventure"}
+adventureSGson = { group = "net.kyori", name = "adventure-text-serializer-gson", version.ref = "adventure"}
+adventureSLegacy = { group = "net.kyori", name = "adventure-text-serializer-legacy", version.ref = "adventure"}
+lwjglStb = { group = "org.lwjgl", name = "lwjgl-stb", version = "lwjgl"}
+
+[plugins]
+shadow = { id = "com.github.johnrengelman.shadow", version.ref = "shadow" }
