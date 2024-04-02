@@ -5,7 +5,7 @@ import com.frfole.mrpc.app.element.FileTreeElement;
 import com.frfole.mrpc.app.translation.I18n;
 import com.frfole.mrpc.app.window.PackMetaEditor;
 import com.frfole.mrpc.app.window.Window;
-import com.frfole.mrpc.pack.util.FileTree;
+import com.frfole.mrpc.pack.filetree.FileTree;
 import imgui.ImGui;
 import imgui.flag.ImGuiCond;
 import imgui.flag.ImGuiDir;
@@ -41,6 +41,7 @@ public class ProjectView implements View {
     @Override
     public void process() {
         View.super.process();
+
         // setup docking
         dockRoot.set(ImGui.dockSpaceOverViewport(ImGui.getMainViewport(), ImGuiDockNodeFlags.None));
         if (firstProcess) {

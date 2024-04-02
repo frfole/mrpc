@@ -1,7 +1,7 @@
 package com.frfole.mrpc.pack;
 
 import com.frfole.mrpc.pack.meta.PackMeta;
-import com.frfole.mrpc.pack.util.FileTree;
+import com.frfole.mrpc.pack.filetree.FileTree;
 import com.google.gson.Gson;
 import org.jetbrains.annotations.NotNull;
 
@@ -40,19 +40,14 @@ public class Project {
     public void loadProject() throws IOException {
         this.meta.load();
         buildFileTree();
-        // TODO: watch for changes in file tree
     }
 
     public void unloadProject() {
-
+        this.fileTree.close();
     }
 
-    private void buildFileTree() {
-        try {
-            this.fileTree.build();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+    private void buildFileTree() throws IOException {
+        this.fileTree.build();
     }
 
     public @NotNull FileTree getFileTree() {

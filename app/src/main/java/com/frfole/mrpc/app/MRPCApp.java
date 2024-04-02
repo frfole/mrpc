@@ -3,11 +3,14 @@ package com.frfole.mrpc.app;
 import com.frfole.mrpc.app.config.AppConfig;
 import com.frfole.mrpc.app.config.ConfigUtils;
 import com.frfole.mrpc.app.config.RecentProject;
+import com.frfole.mrpc.app.texture.Textures;
 import com.frfole.mrpc.app.view.ExceptionView;
 import com.frfole.mrpc.app.view.ProjectView;
 import com.frfole.mrpc.app.view.StartupView;
 import com.frfole.mrpc.app.view.View;
 import com.frfole.mrpc.pack.Project;
+import com.frfole.mrpc.pack.filetree.ChangeEntry;
+import com.frfole.mrpc.pack.resource.ResourceKind;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import imgui.ImGui;
@@ -50,13 +53,13 @@ public final class MRPCApp extends Application {
         try {
             Files.createDirectories(configPath.getParent());
         } catch (IOException e) {
-            setView(new ExceptionView(e));
+            ExceptionHandler.handleException(e);
         }
         try (BufferedWriter bufWriter = Files.newBufferedWriter(configPath, StandardOpenOption.CREATE)) {
             this.gson.toJson(appConfig, AppConfig.class, bufWriter);
             bufWriter.flush();
         } catch (IOException e) {
-            setView(new ExceptionView(e));
+            ExceptionHandler.handleException(e);
         }
     }
 
@@ -76,7 +79,7 @@ public final class MRPCApp extends Application {
         try {
             Files.createDirectories(path);
         } catch (IOException e) {
-            setView(new ExceptionView(e));
+            ExceptionHandler.handleException(e);
         }
         updateConfig(appConfig.withNewRecentProject(new RecentProject(path)));
         activeProject = new Project(path, gson);
@@ -84,7 +87,7 @@ public final class MRPCApp extends Application {
             try {
                 activeProject.loadProject();
             } catch (IOException e) {
-                setView(new ExceptionView(e));
+                ExceptionHandler.handleException(e, true);
             }
         }
     }
@@ -119,7 +122,6 @@ public final class MRPCApp extends Application {
         if (Files.exists(configPath)) {
             try (BufferedReader bufReader = Files.newBufferedReader(configPath)) {
                 AppConfig appConfig = gson.fromJson(bufReader, AppConfig.class);
-                System.out.println(appConfig);
                 if (appConfig == null) {
                     updateConfig(this.appConfig);
                 } else {
@@ -148,8 +150,28 @@ public final class MRPCApp extends Application {
             openedView.onOpen();
         }
 
+        // check file tree for changes
+        if (activeProject != null) {
+            try {
+                activeProject.getFileTree().checkChanges(this::onFileChange);
+            } catch (IOException e) {
+                ExceptionHandler.handleException(e);
+            }
+        }
+
         // process view
         openedView.process();
+
+        if (!(openedView instanceof ExceptionView)) {
+            ExceptionHandler.draw(this);
+        }
+    }
+
+    private void onFileChange(@NotNull ChangeEntry change) {
+        if (change.node().getKind() == ResourceKind.PACK_ICON) {
+            if (change.type() == ChangeEntry.ChangeType.DELETE) Textures.removePackTexture(change.node().getPath());
+            else Textures.getPackTexture(change.node().getPath()).reload();
+        }
     }
 
     public static void main(String[] args) {

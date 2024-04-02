@@ -1,5 +1,6 @@
 package com.frfole.mrpc.app.config;
 
+import com.frfole.mrpc.app.ExceptionHandler;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -40,8 +41,7 @@ public record AppConfig(@NotNull List<RecentProject> recentProjects) {
             try {
                 sameFile = Files.isSameFile(recentProject.path(), project.path());
             } catch (IOException exception) {
-                // TODO: create window for less critical exceptions
-                exception.printStackTrace();
+                ExceptionHandler.handleException(exception);
             }
             if (!sameFile) {
                 newRecentProjects.add(recentProject);

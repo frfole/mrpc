@@ -1,5 +1,6 @@
 package com.frfole.mrpc.app.window;
 
+import com.frfole.mrpc.app.ExceptionHandler;
 import com.frfole.mrpc.app.element.TooltipElement;
 import com.frfole.mrpc.app.element.component.ComponentInputElement;
 import com.frfole.mrpc.app.element.component.ComponentOutputElement;
@@ -97,7 +98,7 @@ public class PackMetaEditor implements Window {
                     this.project.getMeta().setDescription(this.description.getComponent().toAdventure());
                     this.project.getMeta().save();
                 } catch (IOException e) {
-                    throw new RuntimeException(e);
+                    ExceptionHandler.handleException(e);
                 }
             }
         }

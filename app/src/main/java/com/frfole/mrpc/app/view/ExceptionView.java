@@ -8,7 +8,6 @@ public class ExceptionView implements View {
 
     public ExceptionView(Exception exception) {
         this.exception = exception;
-        exception.printStackTrace();
     }
 
     @Override
@@ -21,7 +20,7 @@ public class ExceptionView implements View {
                 ImGui.text("  at " + element.toString());
             }
             ImGui.endGroup();
-            ImGui.end();
         }
+        ImGui.end();
     }
 }
