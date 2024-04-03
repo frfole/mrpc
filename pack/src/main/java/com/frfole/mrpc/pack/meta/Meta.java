@@ -13,8 +13,8 @@ import java.io.IOException;
 import java.nio.file.Path;
 
 public abstract class Meta extends FileResource {
-    protected Meta(@NotNull Path backingFile, @NotNull Project project) {
-        super(backingFile, project);
+    protected Meta(@NotNull Path backingFile) {
+        super(backingFile);
     }
 
     abstract void loadJson(@NotNull JsonElement je);

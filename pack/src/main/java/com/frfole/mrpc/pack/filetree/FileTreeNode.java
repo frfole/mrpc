@@ -8,30 +8,30 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
-public class TreeNode {
-    private final Path path;
-    private final List<TreeNode> children;
+public class FileTreeNode {
+    private final Path relativePath;
+    private final List<FileTreeNode> children;
     private final String name;
     private final ResourceKind kind;
     private final boolean isFile;
 
-    public TreeNode(@NotNull Path path, @NotNull Path rootPath) {
-        this.path = path;
+    public FileTreeNode(@NotNull Path path, @NotNull Path rootPath) {
+        this.relativePath = rootPath.relativize(path);
         this.children = new ArrayList<>();
         this.name = path.getFileName().toString();
         this.isFile = Files.isRegularFile(path);
-        this.kind = ResourceKind.getType(rootPath.relativize(path), isFile);
+        this.kind = ResourceKind.getType(this.relativePath, isFile);
     }
 
-    public @NotNull Path getPath() {
-        return this.path;
+    public @NotNull Path getRelativePath() {
+        return this.relativePath;
     }
 
     public @NotNull String getName() {
         return this.name;
     }
 
-    public @NotNull List<TreeNode> getChildren() {
+    public @NotNull List<FileTreeNode> getChildren() {
         return this.children;
     }
 
@@ -42,7 +42,7 @@ public class TreeNode {
     @Override
     public String toString() {
         return "TreeNode{" +
-                "path=" + path +
+                "relativePath=" + relativePath +
                 ", name=" + name +
                 ", children=" + children +
                 '}';

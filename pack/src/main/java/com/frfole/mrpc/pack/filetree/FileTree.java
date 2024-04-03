@@ -1,5 +1,6 @@
 package com.frfole.mrpc.pack.filetree;
 
+import com.frfole.mrpc.pack.resource.ResourceKind;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -10,6 +11,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardWatchEventKinds;
 import java.nio.file.WatchEvent;
 import java.nio.file.WatchKey;
+import java.nio.file.WatchService;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
@@ -17,26 +19,33 @@ import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 public class FileTree {
-    private final TreeNode rootNode;
+    private final Path rootPath;
+    private final FileTreeNode rootNode;
     private final Set<WatchKey> watchKeys = new HashSet<>();
+    public final Set<FileTreeNode> textures = new HashSet<>();
+    private final WatchService watchService;
 
     public FileTree(Path rootPath) {
-        this.rootNode = new TreeNode(rootPath, rootPath);
+        this.rootPath = rootPath;
+        this.rootNode = new FileTreeNode(rootPath, rootPath);
+        try {
+            watchService = FileSystems.getDefault().newWatchService();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public void build() throws IOException {
-        for (WatchKey key : this.watchKeys) {
-            key.cancel();
-        }
-        this.watchKeys.clear();
+        clean();
         buildNode(this.rootNode, 100);
     }
 
-    public void close() {
+    public void clean() {
         for (WatchKey key : watchKeys) {
             key.cancel();
         }
         watchKeys.clear();
+        this.textures.clear();
     }
 
     public void checkChanges(@NotNull Consumer<ChangeEntry> changeConsumer) throws IOException {
@@ -46,14 +55,14 @@ public class FileTree {
                 if (event == null || !(key.watchable() instanceof Path parentPath)) continue;
                 if (event.kind() == StandardWatchEventKinds.ENTRY_CREATE) {
                     // get file parent node
-                    TreeNode parentNode = getNode(parentPath);
+                    FileTreeNode parentNode = getNode(parentPath);
                     if (parentNode == null) {
                         throw new RuntimeException("failed to find tree node for: " + parentPath);
                     }
                     // check if the file already existed, if so remove it
                     String childName = ((Path) event.context()).getFileName().toString();
                     for (int i = 0; i < parentNode.getChildren().size(); i++) {
-                        TreeNode childNode = parentNode.getChildren().get(i);
+                        FileTreeNode childNode = parentNode.getChildren().get(i);
                         if (childNode.getName().equals(childName)) {
                             parentNode.getChildren().remove(i);
                             changeConsumer.accept(new ChangeEntry(childNode, ChangeEntry.ChangeType.DELETE));
@@ -63,26 +72,26 @@ public class FileTree {
 
                     // create node for the new file
                     Path childPath = parentPath.resolve((Path) event.context());
-                    TreeNode childNode = new TreeNode(childPath, rootNode.getPath());
+                    FileTreeNode childNode = new FileTreeNode(childPath, rootPath);
                     parentNode.getChildren().add(childNode);
                     parentNode.getChildren().sort(FileTree::sort);
                     buildNode(childNode, 100);
                     changeConsumer.accept(new ChangeEntry(childNode, ChangeEntry.ChangeType.CREATE));
                 } else if (event.kind() == StandardWatchEventKinds.ENTRY_MODIFY) {
                     Path childPath = parentPath.resolve((Path) event.context());
-                    TreeNode node = getNode(childPath);
+                    FileTreeNode node = getNode(childPath);
                     if (node == null) {
                         throw new RuntimeException("failed to find tree node for: " + childPath);
                     }
                     changeConsumer.accept(new ChangeEntry(node, ChangeEntry.ChangeType.MODIFY));
                 } else if (event.kind() == StandardWatchEventKinds.ENTRY_DELETE) {
-                    TreeNode parentNode = getNode(parentPath);
+                    FileTreeNode parentNode = getNode(parentPath);
                     if (parentNode == null) {
                         throw new RuntimeException("failed to find tree node for: " + parentPath);
                     }
                     String childName = ((Path) event.context()).getFileName().toString();
                     for (int i = 0; i < parentNode.getChildren().size(); i++) {
-                        TreeNode childNode = parentNode.getChildren().get(i);
+                        FileTreeNode childNode = parentNode.getChildren().get(i);
                         if (childNode.getName().equals(childName)) {
                             parentNode.getChildren().remove(i);
                             changeConsumer.accept(new ChangeEntry(childNode, ChangeEntry.ChangeType.DELETE));
@@ -94,20 +103,24 @@ public class FileTree {
         }
     }
 
-    private void buildNode(@NotNull TreeNode node, int inverseDepth) throws IOException {
-        if (!Files.isDirectory(node.getPath())) {
+    private void buildNode(@NotNull FileTreeNode node, int inverseDepth) throws IOException {
+        Path absolutePath = rootPath.resolve(node.getRelativePath());
+        if (!Files.isDirectory(absolutePath)) {
+            if (node.getKind() == ResourceKind.TEXTURE) {
+                textures.add(node);
+            }
             return;
         } else {
-            watchKeys.add(node.getPath().register(FileSystems.getDefault().newWatchService(), StandardWatchEventKinds.ENTRY_CREATE, StandardWatchEventKinds.ENTRY_DELETE, StandardWatchEventKinds.ENTRY_MODIFY));
+            watchKeys.add(absolutePath.register(watchService, StandardWatchEventKinds.ENTRY_CREATE, StandardWatchEventKinds.ENTRY_DELETE, StandardWatchEventKinds.ENTRY_MODIFY));
         }
         node.getChildren().clear();
         if (inverseDepth < 0) {
             return;
         }
-        try (Stream<Path> subPaths = Files.list(node.getPath())) {
+        try (Stream<Path> subPaths = Files.list(absolutePath)) {
             Iterator<Path> iterator = subPaths.iterator();
             while (iterator.hasNext()) {
-                TreeNode subNode = new TreeNode(iterator.next(), rootNode.getPath());
+                FileTreeNode subNode = new FileTreeNode(iterator.next(), rootPath);
                 node.getChildren().add(subNode);
                 buildNode(subNode, inverseDepth - 1);
             }
@@ -115,15 +128,20 @@ public class FileTree {
         node.getChildren().sort(FileTree::sort);
     }
 
-    private @Nullable TreeNode getNode(@NotNull Path path) {
-        if (path.equals(rootNode.getPath())) return rootNode;
-        Iterator<Path> iterator = this.rootNode.getPath().relativize(path).iterator();
-        TreeNode tempNode = rootNode;
+    /**
+     * Get the tree node that is associated with given path. If the node does not exist null is returned.
+     * @param path the absolute path of the node
+     * @return associated tree node
+     */
+    private @Nullable FileTreeNode getNode(@NotNull Path path) {
+        if (path.equals(rootPath)) return rootNode;
+        Iterator<Path> iterator = this.rootPath.relativize(path).iterator();
+        FileTreeNode tempNode = rootNode;
         boolean found;
         while (iterator.hasNext()) {
             found = false;
             Path next = iterator.next();
-            for (TreeNode child : tempNode.getChildren()) {
+            for (FileTreeNode child : tempNode.getChildren()) {
                 if (child.getName().equals(next.toString())) {
                     tempNode = child;
                     found = true;
@@ -135,7 +153,7 @@ public class FileTree {
         return tempNode;
     }
 
-    private static int sort(TreeNode left, TreeNode right) {
+    private static int sort(FileTreeNode left, FileTreeNode right) {
         if (left.isFile() && !right.isFile()) return 1;
         else if (!left.isFile() && right.isFile()) return -1;
         else return left.getName().compareTo(right.getName());
@@ -148,7 +166,7 @@ public class FileTree {
                 '}';
     }
 
-    public @NotNull TreeNode getRootNode() {
+    public @NotNull FileTreeNode getRootNode() {
         return this.rootNode;
     }
 }

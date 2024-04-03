@@ -74,7 +74,7 @@ public class ProjectView implements View {
                 if (node.getName().equals("pack.mcmeta")) {
                     editorWindow = new PackMetaEditor(this.app.getActiveProject());
                 }
-                System.out.println("open file: " + node.getPath());
+                System.out.println("open file: " + node.getRelativePath());
             });
         }
         ImGui.end();

@@ -10,11 +10,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 
-public abstract class FileResource extends Resource {
-    private final Path backingFile;
+public abstract class FileResource implements Resource {
+    protected final Path backingFile;
 
-    protected FileResource(@NotNull Path backingFile, @NotNull Project project) {
-        super(project);
+    protected FileResource(@NotNull Path backingFile) {
         this.backingFile = backingFile;
     }
 

@@ -10,6 +10,7 @@ import com.frfole.mrpc.app.view.StartupView;
 import com.frfole.mrpc.app.view.View;
 import com.frfole.mrpc.pack.Project;
 import com.frfole.mrpc.pack.filetree.ChangeEntry;
+import com.frfole.mrpc.pack.filetree.FileTreeNode;
 import com.frfole.mrpc.pack.resource.ResourceKind;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -70,6 +71,7 @@ public final class MRPCApp extends Application {
     public void closeProject() {
         if (activeProject == null) return;
         activeProject.unloadProject();
+        Textures.unloadPackTextures();
         activeProject = null;
         setView(new StartupView(this));
     }
@@ -86,6 +88,10 @@ public final class MRPCApp extends Application {
         if (setView(new ProjectView(this))) {
             try {
                 activeProject.loadProject();
+                for (FileTreeNode node : activeProject.getFileTree().textures) {
+                    Textures.loadPackTexture(node.getRelativePath(), activeProject.getProjectRoot());
+                }
+                Textures.loadPackIcon(activeProject.getProjectRoot());
             } catch (IOException e) {
                 ExceptionHandler.handleException(e, true);
             }
@@ -168,9 +174,20 @@ public final class MRPCApp extends Application {
     }
 
     private void onFileChange(@NotNull ChangeEntry change) {
-        if (change.node().getKind() == ResourceKind.PACK_ICON) {
-            if (change.type() == ChangeEntry.ChangeType.DELETE) Textures.removePackTexture(change.node().getPath());
-            else Textures.getPackTexture(change.node().getPath()).reload();
+        if (change.node().getKind() == ResourceKind.TEXTURE) {
+            if (change.type() == ChangeEntry.ChangeType.DELETE) {
+                Textures.unloadPackTexture(change.node().getRelativePath());
+            } else {
+                assert activeProject != null;
+                Textures.loadPackTexture(change.node().getRelativePath(), activeProject.getProjectRoot());
+            }
+        } else if (change.node().getKind() == ResourceKind.PACK_ICON) {
+            if (change.type() == ChangeEntry.ChangeType.DELETE) {
+                Textures.unloadPackIcon();
+            } else {
+                assert activeProject != null;
+                Textures.loadPackIcon(activeProject.getProjectRoot());
+            }
         }
     }
 

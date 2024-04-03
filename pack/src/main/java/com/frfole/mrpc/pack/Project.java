@@ -18,7 +18,7 @@ public class Project {
         this.projectRoot = projectRoot;
         this.fileTree = new FileTree(projectRoot);
         this.gson = gson;
-        this.meta = new PackMeta(this.projectRoot.resolve("pack.mcmeta"), this);
+        this.meta = new PackMeta(this.projectRoot.resolve("pack.mcmeta"));
     }
 
     public Project(@NotNull Path projectRoot) {
@@ -43,7 +43,7 @@ public class Project {
     }
 
     public void unloadProject() {
-        this.fileTree.close();
+        this.fileTree.clean();
     }
 
     private void buildFileTree() throws IOException {

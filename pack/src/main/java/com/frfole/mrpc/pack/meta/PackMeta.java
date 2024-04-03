@@ -22,8 +22,8 @@ public class PackMeta extends Meta {
     private int formatMax = DEFAULT_FORMAT;
     private Component description = Component.empty();
 
-    public PackMeta(@NotNull Path backingFile, @NotNull Project project) {
-        super(backingFile, project);
+    public PackMeta(@NotNull Path backingFile) {
+        super(backingFile);
     }
 
     @Override

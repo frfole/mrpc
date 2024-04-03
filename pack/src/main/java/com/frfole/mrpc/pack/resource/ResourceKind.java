@@ -10,22 +10,27 @@ public enum ResourceKind {
     NAMESPACE,
     PACK_META,
     PACK_ICON,
+    TEXTURE,
     GENERIC_FILE;
     public static ResourceKind getType(@NotNull Path innerPath, boolean isFile) {
-        String part = innerPath.getFileName().toString();
+        String fileName = innerPath.getFileName().toString();
         int depth = innerPath.getNameCount();
-        if (!isFile && depth == 1 && part.isEmpty()) {
+        if (!isFile && depth == 1 && fileName.isEmpty()) {
             return ResourceKind.PROJECT_ROOT;
         } else if (!isFile && depth == 1) {
             return ResourceKind.NAMESPACE;
         } else if (!isFile) {
             return ResourceKind.DIRECTORY;
-        } else if (depth == 1 && part.equals("pack.mcmeta")) {
+        } else if (depth == 1 && fileName.equals("pack.mcmeta")) {
             return ResourceKind.PACK_META;
-        } else if (depth == 1 && part.equals("pack.png")) {
+        } else if (depth == 1 && fileName.equals("pack.png")) {
             return ResourceKind.PACK_ICON;
-        }else {
-            return ResourceKind.GENERIC_FILE;
+        } else if (depth > 2) {
+            String resTypeName = innerPath.getName(1).toString();
+            if (resTypeName.equals("textures") && fileName.endsWith(".png")) {
+                return ResourceKind.TEXTURE;
+            }
         }
+        return ResourceKind.GENERIC_FILE;
     }
 }
